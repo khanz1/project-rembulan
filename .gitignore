@@ -1,3 +1,20 @@
+# editor
+.vscode
+.idea
+*.sublime-project
+*.sublime-workspace
+*.komodoproject
+.komodotools
+.komodoproject
+
+
+# env
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
 # Logs
 logs
 *.log
