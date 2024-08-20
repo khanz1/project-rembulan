@@ -33,7 +33,7 @@ interface VoucherCreationAttributes extends VoucherWithoutId {}
 
 @Table({
   timestamps: true,
-  tableName: 'users',
+  tableName: 'vouchers',
   underscored: true,
 })
 export default class Voucher

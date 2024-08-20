@@ -1,5 +1,6 @@
 import Order, {
   OrderQuantityValidationSchema,
+  OrderStatus,
   OrderValidationSchema,
 } from '../../db/models/order.model';
 import { RequestHandler } from 'express';
@@ -49,6 +50,7 @@ export const handleCreateOrder: RequestHandler = async (req, res, next) => {
     const [cart] = await Cart.findOrCreate({
       where: {
         userId: req.user.id,
+        status: OrderStatus.PENDING,
       },
       defaults: {
         userId: req.user.id,
@@ -56,11 +58,22 @@ export const handleCreateOrder: RequestHandler = async (req, res, next) => {
       },
     });
 
-    const order = await Order.create({
-      menuId: result.menuId,
-      cartId: cart.id,
-      userId: req.user.id,
+    const [order, created] = await Order.findOrCreate({
+      where: {
+        menuId: result.menuId,
+        cartId: cart.id,
+        userId: req.user.id,
+      },
+      defaults: {
+        menuId: result.menuId,
+        cartId: cart.id,
+        userId: req.user.id,
+      },
     });
+
+    if (!created) {
+      await order.increment('quantity');
+    }
 
     res.status(201).json(order);
   } catch (err) {
@@ -82,14 +95,14 @@ export const handleUpdateQuantity: RequestHandler = async (req, res, next) => {
     }
 
     if (result.type === 'increment') {
-      await order.increment('quantity', { by: result.quantity });
+      await order.increment('quantity');
     } else if (result.type === 'decrement') {
       if (order.quantity === 1) {
         await order.destroy();
         return res.json({ message: 'Order deleted' });
       }
 
-      await order.decrement('quantity', { by: result.quantity });
+      await order.decrement('quantity');
     }
 
     res.json(order);

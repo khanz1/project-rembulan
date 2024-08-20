@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
   // logger.error(err);
-  console.log(err);
+  console.log(err, '<e');
   if (err instanceof z.ZodError) {
     res.status(400).json({ error: err.errors[0].message });
   } else if (err instanceof HttpError) {

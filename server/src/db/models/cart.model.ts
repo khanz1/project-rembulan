@@ -15,9 +15,8 @@ import {
 } from 'sequelize-typescript';
 import { z } from 'zod';
 import Payment from './payment.model';
-import Order from './order.model';
+import Order, { OrderStatus } from './order.model';
 import User from './user.model';
-import Menu from './menu.model';
 import { NotFoundError } from '../../helpers/http.error';
 import Voucher from './voucer.model';
 
@@ -31,6 +30,8 @@ export const CartValidationSchema = z.object({
 
 interface CartWithoutId extends z.infer<typeof CartValidationSchema> {
   userId: number;
+  voucherId?: number;
+  status?: OrderStatus;
 }
 
 interface CartAttributes extends CartWithoutId {
@@ -63,10 +64,18 @@ export default class Cart extends Model<
   @Column(DataType.BIGINT)
   total!: number;
 
+  @Default(OrderStatus.PENDING)
+  @Column({
+    type: DataType.ENUM(OrderStatus.PENDING, OrderStatus.COMPLETED),
+  })
+  status!: OrderStatus;
+
   @ForeignKey(() => User)
+  @Column(DataType.INTEGER)
   userId!: number;
 
   @ForeignKey(() => Voucher)
+  @Column(DataType.INTEGER)
   voucherId!: number;
 
   @CreatedAt
@@ -74,6 +83,9 @@ export default class Cart extends Model<
 
   @UpdatedAt
   updatedAt!: Date;
+
+  @BelongsTo(() => User)
+  user!: User;
 
   @BelongsTo(() => Voucher)
   voucher!: Voucher;

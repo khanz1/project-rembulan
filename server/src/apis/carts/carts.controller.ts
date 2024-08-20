@@ -5,7 +5,9 @@ import {
   ErrorMessage,
   UnauthorizedError,
 } from '../../helpers/http.error';
-import Order from '../../db/models/order.model';
+import Order, { OrderStatus } from '../../db/models/order.model';
+import Menu from '../../db/models/menu.model';
+import User from '../../db/models/user.model';
 
 export const getCarts: RequestHandler = async (req, res, next) => {
   try {
@@ -47,13 +49,57 @@ export const applyVoucher: RequestHandler = async (req, res, next) => {
       return next(new BadRequestError('Cart not found'));
     }
 
-    if (cart.voucherCode) {
+    if (cart.voucher.code) {
       return next(new BadRequestError('Voucher already applied'));
     }
 
     await cart.update({
       voucherCode: req.body.voucherCode,
     });
+
+    res.json(cart);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getActiveCartByUserId: RequestHandler = async (req, res, next) => {
+  if (!req.user) {
+    return next(new UnauthorizedError(ErrorMessage.InvalidToken));
+  }
+
+  try {
+    const cart = await Cart.findOne({
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'name', 'email', 'balance'],
+        },
+        {
+          model: Order,
+          required: false,
+          attributes: {
+            exclude: ['menuId', 'userId', 'cartId'],
+          },
+          // where: {
+          //   status: OrderStatus.PENDING,
+          // },
+          include: [
+            {
+              model: Menu,
+            },
+          ],
+        },
+      ],
+      where: {
+        userId: req.user.id,
+        status: OrderStatus.PENDING,
+      },
+    });
+
+    if (!cart) {
+      return next(new BadRequestError('Cart not found'));
+    }
 
     res.json(cart);
   } catch (err) {

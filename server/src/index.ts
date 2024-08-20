@@ -19,7 +19,10 @@ async function bootstrap() {
     const PROJECT_VERSION = process.env['npm_package_version'];
 
     await sequelize.authenticate();
-    await sequelize.sync({ force: true });
+    await sequelize.sync({
+      force: false,
+      alter: true,
+    });
 
     app.listen(PORT, () => {
       const isProduction = NODE_ENV === 'production';

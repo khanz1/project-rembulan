@@ -4,12 +4,18 @@ import MenusRoutes from './menus/menus.routes';
 import { errorHandler } from '../middlewares/error';
 import OrdersRoutes from './orders/orders.routes';
 import { authentication } from '../middlewares/authentication';
+import CategoriesRoutes from './categories/categories.routes';
+import CartsRoutes from './carts/carts.routes';
+import PaymentsRoutes from './payments/payments.routes';
 
 const router = express.Router();
 
-router.use('/auth', AuthRoutes);
-router.use('/menus', authentication, MenusRoutes);
-router.use('/orders', authentication, OrdersRoutes);
+router.use('/api/auth', AuthRoutes);
+router.use('/api/menus', authentication, MenusRoutes);
+router.use('/api/orders', authentication, OrdersRoutes);
+router.use('/api/categories', authentication, CategoriesRoutes);
+router.use('/api/carts', authentication, CartsRoutes);
+router.use('/api/payments', authentication, PaymentsRoutes);
 
 router.use(errorHandler);
 

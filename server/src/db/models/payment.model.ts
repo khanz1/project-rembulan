@@ -14,12 +14,12 @@ import { z } from 'zod';
 import Order from './order.model';
 import Cart from './cart.model';
 import User from './user.model';
-import { TransactionStatus } from '../../types/midtrans';
 
 export enum TrxStatus {
   PENDING = 'pending',
   PAID = 'paid',
   FAILED = 'failed',
+  FAILED_NEW_TRX = 'failed_new_trx',
 }
 
 export const PaymentValidationSchema = z.object({
@@ -28,7 +28,12 @@ export const PaymentValidationSchema = z.object({
   cartId: z.number(),
   payerId: z.number(),
   amount: z.number().positive(),
-  status: z.enum([TrxStatus.PENDING, TrxStatus.PAID, TrxStatus.FAILED]),
+  status: z.enum([
+    TrxStatus.PENDING,
+    TrxStatus.PAID,
+    TrxStatus.FAILED,
+    TrxStatus.FAILED_NEW_TRX,
+  ]),
   paidAt: z.date().optional(),
 });
 
@@ -65,7 +70,7 @@ export default class Payment extends Model<
     type: DataType.STRING,
     allowNull: true,
   })
-  midtransToken!: string;
+  trxToken!: string;
 
   @ForeignKey(() => Cart)
   @Column({
@@ -88,7 +93,12 @@ export default class Payment extends Model<
   amount!: number;
 
   @Column({
-    type: DataType.ENUM(TrxStatus.PENDING, TrxStatus.PAID, TrxStatus.FAILED),
+    type: DataType.ENUM(
+      TrxStatus.PENDING,
+      TrxStatus.PAID,
+      TrxStatus.FAILED,
+      TrxStatus.FAILED_NEW_TRX,
+    ),
     allowNull: false,
   })
   status!: TrxStatus;

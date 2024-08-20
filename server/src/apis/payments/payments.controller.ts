@@ -6,6 +6,46 @@ import {
   TransactionStatus,
 } from '../../types/midtrans';
 import midtrans from 'midtrans-client';
+import { deactivateRecentTry } from './payments.service';
+
+export const getTransactionHistory: RequestHandler = async (req, res, next) => {
+  if (!req.user) {
+    return next(new UnauthorizedError('Unauthorized'));
+  }
+  const id = Number(req.params.id);
+
+  try {
+    const transactions = await Service.getTransactionHistory(id);
+
+    res.json({
+      message: 'Transactions history',
+      data: transactions,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getTransactionsHistory: RequestHandler = async (
+  req,
+  res,
+  next,
+) => {
+  if (!req.user) {
+    return next(new UnauthorizedError('Unauthorized'));
+  }
+
+  try {
+    const transactions = await Service.getTransactionsHistory(req.user);
+
+    res.json({
+      message: 'Transactions history',
+      data: transactions,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
 export const createTransactionToken = async (
   req: Request,
@@ -17,6 +57,8 @@ export const createTransactionToken = async (
   }
 
   const { cartId, amount } = req.body;
+  // const cartId = req.body.cartId;
+  // const amount = Number(req.body.amount);
 
   if (amount > MIDTRANS_MAX_TRX_AMOUNT) {
     return next(
@@ -27,26 +69,43 @@ export const createTransactionToken = async (
   try {
     const pendingTrx = await Service.findUserOnPendingTrx(req.user);
     if (pendingTrx) {
-      try {
-        const midtransTrx = await Service.checkTransactionStatus(
-          pendingTrx.orderId,
-        );
-        if (midtransTrx.transaction_status === TransactionStatus.CAPTURE) {
-          return res.json({
-            message: 'You have a been completed transaction',
-            data: pendingTrx,
-          });
-        }
-      } catch (err) {
-        if (err instanceof midtrans.MidtransError) {
-          if (err.ApiResponse.status_code === '404') {
+      const pendingTrxAmount = Number(pendingTrx.amount);
+
+      if (pendingTrx.cartId === cartId && pendingTrxAmount === amount) {
+        try {
+          const midtransTrx = await Service.checkTransactionStatus(
+            pendingTrx.orderId,
+          );
+          if (midtransTrx.transaction_status === TransactionStatus.CAPTURE) {
             return res.json({
-              message: 'You have a pending transaction',
+              message: 'You have a been completed transaction',
               data: pendingTrx,
             });
           }
+
+          return res.status(200).json({
+            message: 'You have pending Transaction',
+            data: pendingTrx,
+          });
+        } catch (err) {
+          if (err instanceof midtrans.MidtransError) {
+            if (err.ApiResponse.status_code === '404') {
+              return res.json({
+                message: 'You have a pending transaction',
+                data: pendingTrx,
+              });
+            }
+          }
         }
       }
+
+      await Service.deactivateRecentTry(pendingTrx);
+      const trx = await Service.createTransaction(req.user, amount, cartId);
+
+      return res.status(201).json({
+        message: 'Transaction created',
+        data: trx,
+      });
     }
 
     const trx = await Service.createTransaction(req.user, amount, cartId);
@@ -79,7 +138,8 @@ export const transactionSuccess: RequestHandler = async (req, res, next) => {
       pendingTrx.orderId,
     );
     if (midtransTrx.transaction_status === TransactionStatus.CAPTURE) {
-      await Service.updateUserTransaction(pendingTrx.orderId);
+      await Service.updateUserTransaction(pendingTrx.id);
+      await Service.updateOrderStatus(pendingTrx.cartId);
       return res.json({
         message: 'Transaction success',
       });

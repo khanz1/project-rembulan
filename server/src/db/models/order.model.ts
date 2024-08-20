@@ -16,16 +16,18 @@ import User from './user.model';
 import Menu from './menu.model';
 import Cart from './cart.model';
 
+export enum OrderStatus {
+  PENDING = 'pending',
+  COMPLETED = 'completed',
+}
+
 export const OrderQuantityValidationSchema = z.object({
-  quantity: z
-    .number({
-      required_error: 'Quantity is required',
+  quantity: z.number().positive().negative().optional(),
+  id: z
+    .string({
+      required_error: 'Menu ID is required',
     })
-    .positive()
-    .negative(),
-  id: z.number({
-    required_error: 'Menu ID is required',
-  }),
+    .transform(val => parseInt(val)),
   type: z.enum(['increment', 'decrement']),
 });
 
@@ -39,6 +41,7 @@ export const OrderValidationSchema = z.object({
 interface OrderWithoutId extends z.infer<typeof OrderValidationSchema> {
   userId: number;
   quantity?: number;
+  status?: OrderStatus;
 }
 
 interface OrderAttributes extends OrderWithoutId {
@@ -88,6 +91,12 @@ export default class Order extends Model<
     allowNull: false,
   })
   quantity!: number;
+
+  @Default(OrderStatus.PENDING)
+  @Column({
+    type: DataType.ENUM(OrderStatus.PENDING, OrderStatus.COMPLETED),
+  })
+  status!: OrderStatus;
 
   @CreatedAt
   createdAt!: Date;

@@ -6,6 +6,7 @@ import { findOrCreateUser } from './auth.service';
 
 export const handleLoginGoogle: RequestHandler = async (req, res, next) => {
   try {
+    console.log('req.body', req.body);
     const { googleToken } = await GoogleLoginSchema.parseAsync(req.body);
 
     const payload = await verifyGoogleToken(googleToken);
